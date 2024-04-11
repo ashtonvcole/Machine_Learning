@@ -20,6 +20,37 @@ In this project, we build and test various neural networks to predict property d
 
 ### Jupyter Notebook Files
 
-### Building Docker Container
+The `.ipynb` files can be run with Jupyter Notebook using a Python 3 kernel. The snippets themselves can also be run as a simple Python script, but the output stream will need to be printed or written to files appropriately.
 
-### Running and Testing Inference Server
+The archive `data_all_modified.zip` in the `data/` folder will need to be unzipped to a `data_all_modified` folder in the same location for the notebooks to run as expected.
+
+### Inference Server
+
+Ordinary Docker commands may be used to build a Docker image and deploy a container. A `docker-compose.yml` file has also been provided to speed up the process. The image and container may be built at once using the command `docker-compose up`. The command `docker-compose down` stops the container.
+
+The server may be tested using a client-side Python script like the following.
+
+```Python
+import requests
+
+url = `http://127.0.0.1/models/hurricane-damage/v1`
+file = open('image.jpeg', 'rb')
+files = {'image': file.read()}
+
+response = requests.post(url, files=files)
+print(response.json)
+```
+
+#### Server Documentation
+
+#### Special Notes for Mac Users
+
+Unfortunately, as of April 2024, Macs cause a couple of issues for users.
+
+First, the Linux-based container may have issues running on ARM architecture. An additional linke in `docker-compose-arm64.yml` specifically sets a version of Linux that may run on ARM architecture. To specifically use this file, the following command may be used.
+
+```docker-compose -f docker-compose-arm64.yml up```
+
+Port 5000 may be already busy, because newer Macs use port 5000 for Airplay Receiver. Going to `System Settings > General > AirDrop and Handoff` and turning off AitPlay Receiver should resolve this issue.
+
+At the moment, while installing TensorFlow into the container, an error occurs while installing h5py. However, the container will deploy on other platrorms.

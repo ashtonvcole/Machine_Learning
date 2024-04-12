@@ -49,7 +49,7 @@ print(response.json())
 
 ```JSON
 {
-	'result': [probability_damage, probability_no_damage]
+	"result": [probability_damage, probability_no_damage]
 }
 ```
 

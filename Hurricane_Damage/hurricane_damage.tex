@@ -18,28 +18,130 @@
 
 \section{Introduction}
 
-In this project, we build and test various neural networks to predict property damage from a satellite image. The best-performing network is then saved to disk and developed into a containerized Flask *inference server*.
+In this project, we build and test neural networks in Python, in order to predict hurricane damage on property from a satellite image. Three architectures are considered: a dense Artificial Neural Network, the LENET-5 Convolutional Neural Network, and a modified version of the LENET-5 model. The best-performing modified LENET-5 network is then saved to disk and developed into a containerized Flask \emph{inference server}.
 
 \section{Methodology}
 
+\subsection{Project Structure}
+
+\begin{enumerate}
+	\item \verb|api.py|: Python code defining the endpoints of the Flask inference server.
+	\item \verb|data/|: A folder used to hold training data.
+	\begin{enumerate}
+		\item \verb|data_all_modified.zip|: An archive of the image dataset, i.e. 128 x 128 JPEG images, divided into \verb|damage| and \verb|no_damage| folders.
+	\end{enumerate}
+	\item \verb|dense-ann.ipynb|: A notebook building a densely connected Artificial Neural Network.
+	\item \verb|Dockerfile|: A file with intructions to build a Docker image of the inference server from this directory.
+	\item \verb|docker-compose.yml|: A file with instructions to build or pull the Docker image and then start a container running the inference server.
+	\item \verb|docker-compose-arm64.yml|: An alternate \verb|docker-compose| file for Mac ARM chip architecture, to resolve platform errors.
+	\item \verb|lenet-5-cnn.ipynb|: A notebook building a LENET-5 Convolutional Neural Network.
+	\item \verb|lenet-5-cnn-alternate.ipynb|: A notebook building an alternate LENET-5 Convolutional Neural Network described in https://arxiv.org/pdf/1807.01688.pdf.
+	\item \verb|lenet-5-modified.keras|: A file holding the trained alternate LENET-5 network.
+	\item \verb|preprocessing.ipynb|: A notebook splitting the unzipped \verb|data_all_modified| images into training and testing folders.
+\end{enumerate}
+
 \subsection{Data Preparation}
-data preparation
+
+First, the data archive is unzipped and the \verb|preprocessing.ipynb| notebook is run. This script creates separate directories for data used to train and independently test the models. Images are randomly compied into each, with 80\% of the pictures being used to train the model. Images are labeled by the subdirectory in which they reside: \verb|damage/| or \verb|no_damage/|.
+
+Before being applied to models, the images undergo additional processing steps. They are read-in using a TensorFlow Keras routine which returns a \verb|Dataset| object. This class acts as a wrapper for the ``independent'' pixel RGB values, stored as a 3rd-order 128 x 128 x 3 tensor, and also the ``dependent'' class label. The tensor values are scaled down by a factor of $\frac{1}{255}$, so that they fall between 0 and 1. It also splits the training data into true training and validation subsets, 
 
 \subsection{Model Construction and Training}
-model design: architectures, layers, parameters
 
-\subsection{Containerization}
-docker, docker-compose, flask
-mac limitations
+All models are constructed using the TensorFlow Keras submodule. As simple Artificial and Convolutional Neural Networks, they are all sequential and are based on the same \verb|Sequential| class. The differ, then, in the specific layers used, outlined in Table \ref{tbl:architecture}. Each accepts, as an input, a 4th-order tensor, i.e. a batch of $n$ images, of dimension $n$ x 128 x 128 x 3.
+
+\begin{table}[h!]
+	\centering
+	\caption{Architecture of each neural network.}
+	\label{tbl:architecture}
+	\begin{tabular}{lr|lr|lr}
+		\multicolumn{2}{c}{ANN} & \multicolumn{2}{c}{LENET-5} & \multicolumn{2}{c}{Modified LENET-5} \\
+		Layer & Parameters & Layer & Parameters & Layer & Parameters \\
+		\hline
+		Flatten & 0 & 6 3x3 Convolutions & 168 & 32 3x3 Convolutions & 896 \\
+		128 Dense & 6,291,584 & 2x2 Average Pooling & 0 & 2x2 Max Pooling & 0 \\
+		128 Dense & 16,512 & 16 3x3 Convolutions & 880 & 64 3x3 Convolutions & 18,496 \\
+		Dense & 258 & Flattening & 0 & 2x2 Max Pooling & 0 \\
+		 &  & 100 Dense & 5,953,700 & 128 3x3 Convolutions & 73,856 \\
+		 &  & 84 Dense & 8,484 & 2x2 Max Pooling & 0 \\
+		 &  & 2 Dense & 170 & 128 3x3 Convolutions & 147,584 \\
+		 &  &  &  & 2x2 Max Pooling & 0 \\
+		 &  &  &  & Flattening & 0 \\
+		 &  &  &  & 10\% Dropout & 0 \\
+		 &  &  &  & 512 Dense & 2,359,808 \\
+		 &  &  &  & 2 Dense & 1,026 \\
+		\hline
+		Total & 6,308,354 & Total & 5,963,402 & Total & 2,601,666 \\
+	\end{tabular}
+\end{table}
+
+The models are then fit to the scaled training and validation data, before being tested on the testing data. The compilation and fitting parameters are outlined in Table \ref{tbl:parameters}. The best-performing model is then saved as a file using TensorFlow's built-in functions.
+
+\begin{table}[h!]
+	\centering
+	\caption{Parameters used to compile and fit each model.}
+	\label{tbl:parameters}
+	\begin{tabular}{r|ccc}
+		Parameter & ANN & LENET-5 & Modified LENET-5 \\
+		\hline
+		Optimizer & \verb|adam| & \verb|RMSprop| & \verb|RMSprop| \\
+		Loss & Sparse Cat. Crossentropy & Sparse Cat. Crossentropy & Sparse Cat. Crossentropy \\
+		Epochs & 5 & 5 & 5 \\
+		Batch Size & 32 & 32 & 32 \\
+	\end{tabular}
+\end{table}
+
+\subsection{Containerized Inference Server}
+
+A simple Flask server is built in Python, which reads in the saved model and uses it to predict on images. It contains the following routes.
+
+\begin{itemize}
+	\item \verb|models/hurricane-damage/v1|
+	\begin{itemize}
+		\item \verb|GET|: Returns basic metadata about the inference server.
+		\item \verb|POST|: Classifies a satellite image of property as having been damaged or having not been damaged by a hurricane. This route requires a byte stream of a 128 x 128 JPEG image, wrapped in a dictionary under the key \verb|"image".| It returns a JSON dictionary in the following form.
+		\verb|{'result': [probability_damage, probability_no_damage]}|
+	\end{itemize}
+\end{itemize}
+
+The API is then put into a Docker image with the model file. The image may be found on Docker Hub as \verb|ashtonvcole/hurricane-damage-api|, or built manually. It may be run with a binding to port 5000, which is where Flask expects incoming HTTP requests. A \verb|docker-compose.yml| file is also included in the project repository to streamline building and deployment with the \verb|docker-compose| command.
+
+It is worth noting that as of now, the Docker throws errors when deployed on new Macs with the ARM architecture. However, the container should deploy as expected on any x86-architecture computer.
+
+With the container deployed, the API may be tested on the local host. Requests may be conveniently made through a Python interpreter or script like the one below.
+
+\begin{lstlisting}
+import requests
+
+url = 'http://127.0.0.1/models/hurricane-damage/v1'
+file = open('image.jpeg', 'rb')
+files = {'image': file.read()}
+
+response = requests.post(url, files=files)
+print(response.json())
+\end{lstlisting}
 
 \section{Results}
 
-model performance
-which model was used
+\begin{table}[h!]
+	\centering
+	\caption{Results for each model.}
+	\label{tbl:results}
+	\begin{tabular}{r|ccc}
+		Metric & ANN & LENET-5 & Modified LENET-5 \\
+		\hline
+		Training Accuracy & 0.6637 & 0.8556 & 0.9320 \\
+		Validation Accuracy & 0.6681 & 0.8461 & 0.9455 \\
+		Testing Accuracy & 0.6644 & 0.8415 & 0.9395
+	\end{tabular}
+\end{table}
 
 \section{Conclusions}
 
-model evaluation
-which was us
+As seen in Table \ref{tbl:results}, the Modified LENET-5 model performed the best of the three. Interestingly, it is also the most efficient, containing the fewest trainable parameters. With a roughly 94\% accuracy, the user may trust it to reliably classify most images. Thus, it is selected for the inference server.
+
+At a minimum, with similar values for training, validation, and test accuracy, none of the models show overfitting. This is a sign, however, that in the future, additional experimentation could be done to increase accuracy. Other combinations of layers could be tested, or more training epochs could be run for each model, up to the point of maximum accuracy without overfitting.
+
+Regardless, the results of these models show the powerful ability of machine learning to automate away tedious tasks like inspecting individual properties for damage after a hurricane. Such models could be used to quickly identify zones of damage, to better allocate recovery resources and prepare regions for the future.
 
 \end{document}

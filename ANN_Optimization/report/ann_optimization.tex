@@ -110,13 +110,11 @@ This study can be replicated by running the Jupyter Notebook files on a Jupyter 
 
 In this section, first, tables are provided showing the training, validation, and testing accuracies for each model at the tenth epoch. Then, graphs show how the training and validation accuracies vary for each model across training epochs.
 
-put description here
-
-matrices of accuracy, validation accuracy, per dataset
-
-takes about an hour to execute each sweep
-
 put in observations
+
+As seen in Table \ref{tbl:m-2l}, the ANNs train on the \emph{MNIST} dataset to a very high accuracy, not varying more than about 2\%. Adding more perceptrons increases accuracy, but only subtly so, on the order of tenths of a percentage point. However, it seems that adding moe perceptrons in the first layer generally has a greater benefit than in the second layer. The hurricane damage dataset shows less clear patterns in Table \ref{tbl:h-2l}. An odd feature to note is that many of the models converge to the same training and validation accuracies: 0.664 and 0.668. The results for the \emph{beans} dataset in Table \ref{tbl:b-2l} are similarly sporadic, and tend to be less accurate. Part of this may be attributed to the fact that there are three output categories instead of two.
+
+The graphs provide interesting insights into the training process. Only the \emph{MNIST} dataset converges cleanly, seen in Figure \ref{fig:m-2l}. While the differences are subtle, it is also clear that having more perceptrons, especially in the first layer, correlates positively with training and validation accuracies. For the \emph{hurricane damage} case, in Figure \ref{fig:h-2l} it is seen that many models start decreasing in quality around the third epoch and converge to those two accuracy values. The \emph{beans} models in Figure \ref{fig:b-2l} do not have that malconvergance issue, but they have incredibly sporadic accuracies across epochs, not demonstrating good convergance.
 
 \begin{table}[h!]
 	\centering
@@ -191,19 +189,13 @@ put in observations
 
 \section{Conclusions}
 
-overfitting
+The first apparent conclusion is that ANNs perform far better for the \emph{MNIST} dataset than the \emph{hurricane damage} and \emph{beans} cases. The accuracies are far higher across the board, and during training, the models converge far more cleanly. The impact of the number of perceptrons is far clearer, with more perceptrons, especially in the first layer, resulting in higher accuracy. On the other hand, the other cases show poor accuracy and only limited model convergence. This may be a reflection the complexity of the problems. The first case is identifying digits from small grayscale images. There is not added nuance from things like colors or small features, which are decisive in identifying whether an area is flooded with brown water or a leaf is diseased with a particulary shape of spot. This probably means that the other cases are simply not as well-suited problems for an ANN, or at least an ANN limited to only two layers. Convolutional Neural Networks (CNNs) are another type of neural network specifically designed to extract image features using many layers of convolutions. Such would likely be a far better tool for larger, color images with subtler pattern detection requirements.
 
-vanishing gradient
+It is not entirely clear why the testing and validation accuracies converged to a worse value in the \emph{hurricane damage} case. This may represent some kind of local minimum in the loss function, which the models are getting ``trapped'' in. This may require an adjustment to the optimizer and loss functions, or it may be another sign that the model and problem are poorly fit.
 
-bottlenecking of first layer
+However, if only considering the \emph{MNIST} dataset, it seems that increasing the number of perceptrons generally improves accuracy. There seems to be more benefit to increasing the first layer, which could be related to a sort of information bottlenecking. The images have $28 \times 28 = 784$ data points. This information is essentially compressed and rehashed into the first hidden layer. No matter how many perceptrons are added into the second layer, they are essentially limited by the number of neurons in the first layer. The difference is not significant, though, or at a minimum, 64 perceptrons is enough to encode most of the information from the image needed to infer its digit.
 
-image problem complexity
-
-try higher resolution, batches
-
-more layers
-
-cnns
+The results are not quite as clear as desired, but they do open up more questions and opportunities for future work. Other, simpler datasets like the \emph{MNIST} one could be tested. Given more storage, a greater range of perceptron counts could be explored with finer resolution. The number of layers could also be explored, although the variation in perceptron counts would likely have to be limited somehow. For now, it seems that more perceptrons are generally better, but that they do not necessarily make an ANN fit better for problems it is not well-suited to. Sporadic results may be a sign that the nature of the problem requires a different solution tool.
 
 \bibliographystyle{plain}
 \bibliography{refs}

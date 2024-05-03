@@ -1,0 +1,207 @@
+\documentclass{article}
+\usepackage{graphicx, float} % Required for inserting images
+\usepackage[letterpaper, margin=1in]{geometry}
+\usepackage{amsmath, listings, multirow, physics, placeins}
+
+\lstdefinestyle{mystyle}{
+	basicstyle=\ttfamily
+}
+\lstset{style=mystyle}
+
+\title{COE 379L: Project 4}
+\author{Ashton Cole}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Neural networks are a powerful tool to perform various classifcation and regression tasks. One interesting feature of neural networks, compared to other machine learning models, like a linear regression or K-nearest neighbor classification, is that they grant the user significant leeway in their design. In a dense Artificial Neural Network (ANN), each layer can have an arbitrary number of perceptrons with a particular activation function, and an arbitrary number of layers can be added. The possibilities are greatly increased when other types of layers, like convolutional, pooling, and dropout ones, are brought into consideration.
+
+There are not any immediately obvious rules of what kind of network structure should be used. How many layers should be used for an image classification problem? How many perceptrons should be in each layer? The large \emph{hyperparameter} space makes it intimidating to fine-tune a neural network model. This raises an interesting problem to explore.
+
+The goal of this project is to investigate how the architecture of a neural network impacts its accuracy. Hyperpararameter sweeps of dense ANN architectures will be performed to glean any apparent patterns. Training is done on three unique image classifcation problems, to see how dependent the results are on the dataset. The results are used to identify both the optimal architectures and general relationships between hyperparameters and accuracy.
+
+\section{Methodology}
+
+\subsection{Project Structure}
+
+This project is organized into several Jupyter notebook files, as well as a data folder. Additional output files are generated when the notebooks are run.
+
+\begin{itemize}
+	\item \verb|ann-beans.ipynb|: A Jupyter Notebook file which conducts a hyperparameter sweep for the \emph{beans} dataset.
+	\item \verb|ann-hurricane.ipynb|: A Jupyter Notebook file which conducts a hyperparameter sweep for the \emph{hurricane damage} dataset.
+	\item \verb|ann-mnist.ipynb|: A Jupyter Notebook file which conducts a hyperparameter sweep for the \emph{MNIST} dataset.
+	\item \verb|preprocessing.ipynb|: A Jupyter Notebook file which performs the train-test split on the hurricane damage dataset's directory.
+	\item \verb|data/|: A folder to hold the hurricane damage dataset.
+	\begin{itemize}
+		\item \verb|data_all_modified.zip|: An archive of the hurricane damage dataset.
+	\end{itemize}
+\end{itemize}
+
+\subsection{Datasets}
+
+Three datasets are used for this study, to evaluate whether or not certain results are tied to a particular dataset: one of handwritten numbers, one of hurricane damage, and another of beanstalk leaves.
+
+First, the \emph{MNIST} \cite{mnistdata} dataset from class is revisited. This Modified National Institute of Standards and Technology database set contains 70,000 $28 \times 28$-pixel black-and-white images of handwritten digits. These are labeled 0-9, as seen in Figure \ref{fig:m-eg}
+
+\begin{figure}
+	\centering
+	\includegraphics[width=\linewidth]{images/m-eg.png}
+	\caption{Example pictures from the \emph{MNIST} dataset.}
+	\label{fig:m-eg}
+\end{figure}
+
+Second, the \emph{hurricane damage} \cite{hurricanedata} dataset from Project 3 is revisited. This set contains 17,057 $128 \times 128$-pixel color satellite images of properties. These are labeled as either having ``damage'' or ``no damage'' by flooding associated wtih a hurricane, as seen in Figure \ref{fig:h-eg}.
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.3\linewidth]{images/eg_damage.jpeg}
+	\includegraphics[width=0.3\linewidth]{images/eg_no_damage.jpeg}
+	\caption{Example pictures from the \emph{hurricane damage} dataset, of properties with flooding (damage) and without flooding (no damage).}
+	\label{fig:h-eg}
+\end{figure}
+
+In addition, a new \emph{beans} \cite{beansdata} dataset from the TensorFlow Datasets module is considered. This set contains 1,295 $500 \times 500$-pixel color images of leaves of beanstalks. Leaves are either categorized as healthy or having angular leaf spot or rust diseases, as seen in Figure \ref{fig:b-eg}.
+
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.3\linewidth]{images/eg_healthy.jpg}
+	\includegraphics[width=0.3\linewidth]{images/eg_angular.jpg}
+	\includegraphics[width=0.3\linewidth]{images/eg_rust.jpg}
+	\caption{Example pictures from the \emph{beans} dataset, of beanstalk leaves that are healthy, have angular spots, or have rust.}
+	\label{fig:b-eg}
+\end{figure}
+
+\subsection{ANN Hyperparameter Sweep}
+
+Neural networks are constructed using TensorFlow, specifically, the \verb|Sequential| model type available through the Keras submodule is used.
+
+Model construction and hyperparameter sweeping are automated by the Keras Tuner module. Two dense hidden layers are used, each having a varying number of 64, 128, 192, or 256 perceptrons. To simplify the sweep, only the number of perceptrons in each layer is varied. Activation functions are held constant: the hidden layers use the ``ReLU'' function, and the output layer uses the ``softmax'' function. This structure is summarized in Table \ref{tbl:ann}. For training, the optimizer is ``adam'' and loss is calculated using ``sparse categorical crossentropy.'' Finally, the models are trained for 10 epochs, in batches of 32 images.
+
+\begin{table}[h!]
+	\centering
+	\caption{Outline of the sequential neural network structure used for this study.}
+	\label{tbl:ann}
+	\begin{tabular}{r|cccc}
+		Layer & Type & Input Shape & Number of Perceptrons & Activation Function \\
+		\hline
+		0 & Flatten & $s \times s$ & N/A & N/A \\
+		1 & Dense & $s^{2}$ & 64, 128, 192, 256 & ReLU \\
+		2 & Dense & Depends & 64, 128, 192, 256 & ReLU \\
+		3 & Dense & Depends & Depends & Softmax \\
+	\end{tabular}
+\end{table}
+
+During the sweep, trained model checkpoints and their metadata are saved to a \verb|tuner/| directory by Keras Tuner. In addition, the training and validation losses and accuracies are logged after each epoch to a CSV file by means of a callback function. Accuracy is used as a simple metric to evaluate the quality of models. Training, validation, and testing data accuracy are specifically compared against each other, to ensure that overfitting is not an issue.
+
+The number of layers used and hyperparameter combinations tested are admittedly limited, because additional layers increase complexity and storage requirements exponentially. Even when only considering two hidden layers, trained on one image set, for 16 different combinations of perceptron counts, over a third of the testing machine's disk storage is consumed. Additional layers also increase the chances of encountering the vanishing gradient problem. This arises from back propagation, i.e. a ``long'' derivative chain rule, used to minimize the cost function of the model.
+
+\subsection{Setup and Execution}
+
+This study can be replicated by running the Jupyter Notebook files on a Jupyter Notebook server with a Python 3 kernel. The TensorFlow, TensorFlow Datasets, and Keras Tuner packages should be installed into the environment. First, the \verb|data_all_modified.zip| file should be extracted within the \verb|data/| folder. The \verb|preprocessing.ipynb| file should then be run to conduct a train-test split for the \emph{hurricane damage} dataset. Then, the other notebook files may be run to conduct the parameter sweeps. The model checkpoints and their data will be output to a generated \verb|tuner/| directory. CSV logs will be output to the source directory.
+
+\section{Results}
+
+\FloatBarrier
+
+put description here
+
+matrices of accuracy, validation accuracy, per dataset
+
+takes about an hour to execute each sweep
+
+put in observations
+
+\begin{table}[h!]
+	\centering
+	\caption{Impact of number of hidden-layer perceptrons on model accuracy, for training, validation, and testing data, trained for 10 epochs on the \emph{MNIST} dataset.}
+	\label{tbl:m-2l}
+	\begin{tabular}{r|ccc|ccc|ccc|ccc}
+		Second Layer & \multicolumn{12}{c}{First Layer Perceptrons} \\
+		Perceptrons & \multicolumn{3}{c}{64} & \multicolumn{3}{c}{128} & \multicolumn{3}{c}{192} & \multicolumn{3}{c}{256} \\
+		\hline
+		64 & 0.991 & 0.975 & 0.973 & 0.993 & 0.976 & 0.977 & 0.995 & 0.977 & 0.978 & 0.995 & 0.976 & 0.979 \\
+		128 & 0.992 & 0.975 & 0.975 & 0.993 & 0.973 & 0.976 & 0.994 & 0.977 & 0.978 & 0.994 & 0.974 & 0.979 \\
+		192 & 0.993 & 0.969 & 0.974 & 0.993 & 0.972 & 0.979 & 0.994 & 0.977 & 0.977 & 0.994 & 0.977 & 0.979 \\
+		256 & 0.993 & 0.971 & 0.973 & 0.994 & 0.976 & 0.975 & 0.994 & 0.975 & 0.977 & 0.994 & 0.978 & 0.979
+	\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+	\centering
+	\caption{Impact of number of hidden-layer perceptrons on model accuracy, for training, validation, and testing data, trained for 10 epochs on the \emph{hurricane damage} dataset.}
+	\label{tbl:h-2l}
+	\begin{tabular}{r|ccc|ccc|ccc|ccc}
+		Second Layer & \multicolumn{12}{c}{First Layer Perceptrons} \\
+		Perceptrons & \multicolumn{3}{c}{64} & \multicolumn{3}{c}{128} & \multicolumn{3}{c}{192} & \multicolumn{3}{c}{256} \\
+		\hline
+		64 & 0.771 & 0.763 & 0.768 & 0.680 & 0.668 & 0.740 & 0.752 & 0.773 & 0.765 & 0.751 & 0.774 & 0.770 \\
+		128 & 0.777 & 0.784 & 0.770 & 0.761 & 0.768 & 0.770 & 0.664 & 0.668 & 0.742 & 0.664 & 0.668 & 0.745 \\
+		192 & 0.664 & 0.668 & 0.725 & 0.662 & 0.753 & 0.758 & 0.664 & 0.668 & 0.751 & 0.723 & 0.719 & 0.749 \\
+		256 & 0.664 & 0.668 & 0.664 & 0.664 & 0.668 & 0.733 & 0.664 & 0.668 & 0.742 & 0.664 & 0.668 & 0.709
+	\end{tabular}
+\end{table}
+
+\begin{table}[h!]
+	\centering
+	\caption{Impact of number of hidden-layer perceptrons on model accuracy, for training, validation, and testing data, trained for 10 epochs on the \emph{beans} dataset.}
+	\label{tbl:b-2l}
+	\begin{tabular}{r|ccc|ccc|ccc|ccc}
+		Second Layer & \multicolumn{12}{c}{First Layer Perceptrons} \\
+		Perceptrons & \multicolumn{3}{c}{64} & \multicolumn{3}{c}{128} & \multicolumn{3}{c}{192} & \multicolumn{3}{c}{256} \\
+		\hline
+		64 & 0.637 & 0.466 & 0.500 & 0.663 & 0.376 & 0.672 & 0.708 & 0.444 & 0.570 & 0.652 & 0.376 & 0.578 \\
+		128 & 0.552 & 0.617 & 0.586 & 0.645 & 0.353 & 0.609 & 0.708 & 0.571 & 0.695 & 0.603 & 0.556 & 0.711 \\
+		192 & 0.683 & 0.406 & 0.711 & 0.605 & 0.406 & 0.555 & 0.723 & 0.368 & 0.641 & 0.669 & 0.752 & 0.695 \\
+		256 & 0.661 & 0.541 & 0.648 & 0.705 & 0.519 & 0.742 & 0.691 & 0.586 & 0.547 & 0.746 & 0.504 & 0.516
+	\end{tabular}
+\end{table}
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.49\linewidth]{images/m-training-accuracy.png}
+	\includegraphics[width=0.49\linewidth]{images/m-validation-accuracy.png}
+	\caption{Training and validation accuracies for the \emph{MNIST} dataset across training epochs.}
+	\label{fig:m-2l}
+\end{figure}
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.49\linewidth]{images/h-training-accuracy.png}
+	\includegraphics[width=0.49\linewidth]{images/h-validation-accuracy.png}
+	\caption{Training and validation accuracies for the \emph{hurricane damage} dataset across training epochs.}
+	\label{fig:h-2l}
+\end{figure}
+
+\begin{figure}[h!]
+	\centering
+	\includegraphics[width=0.49\linewidth]{images/b-training-accuracy.png}
+	\includegraphics[width=0.49\linewidth]{images/b-validation-accuracy.png}
+	\caption{Training and validation accuracies for the \emph{beans} dataset across training epochs.}
+	\label{fig:b-2l}
+\end{figure}
+
+\FloatBarrier
+
+\section{Conclusions}
+
+overfitting
+
+vanishing gradient
+
+image problem complexity
+
+try higher resolution, batches
+
+more layers
+
+cnns
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

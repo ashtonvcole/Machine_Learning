@@ -8,7 +8,7 @@ Though the name is long, this was essentially an application-oriented machine le
 
 ## Contents
 
-- Project 1, [Linear_Regression](/Linear_Regression): Uses a high-dimensional linear regression model to study factors impacting fuel efficiency in cars.
-- Project 2, [Breast_Cancer](/Breast_Cancer): Compares K-Nearest Neghbor, Naive Bayes, and Random Forest models predicting breast cancer recurrence.
-- Project 3, [Hurricane_Damage](/Hurricane_Damage): Compares ANN and CNN models determining whether a property is flooded from satellite images.
-- Final Project, [ANN_Optimization](/ANN_Optimization): Conducts a hyperparameter sweep to attempt to optimize ANN's for a variety of sample problems.
+- Project 1, [Linear Regression](/Linear_Regression): Uses a high-dimensional linear regression model to study factors impacting fuel efficiency in cars.
+- Project 2, [Breast Cancer](/Breast_Cancer): Compares K-Nearest Neghbor, Naive Bayes, and Random Forest models predicting breast cancer recurrence.
+- Project 3, [Hurricane Damage](/Hurricane_Damage): Compares ANN and CNN models determining whether a property is flooded from satellite images.
+- Final Project, [ANN Optimization](/ANN_Optimization): Conducts a hyperparameter sweep to attempt to optimize ANN's for a variety of sample problems.

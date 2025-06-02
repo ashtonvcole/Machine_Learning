@@ -6,11 +6,11 @@ This assignment demonstrates several important machine learning principles. The 
 
 ## Contents
 
-- [`bc.csv`](/bc.csv): Initial data set.
-- [`bc_clean.csv`](/bc_clean.csv): Processed data set used to train machine learning models. See the notebooks and report for more details on methodology.
-- [`breast_cancer.pdf`](/breast_cancer.pdf): This report summarizes the assignment.
-- [`part-1.ipynb`](/part-1.ipynb): This part cleans and saves the data set. It also includes traditional analysis methods.
-- [`part-2.ipynb`](/part-2.ipynb): This part uses the data to train and test models.
+- [`bc.csv`](bc.csv): Initial data set.
+- [`bc_clean.csv`](bc_clean.csv): Processed data set used to train machine learning models. See the notebooks and report for more details on methodology.
+- [`breast_cancer.pdf`](breast_cancer.pdf): This report summarizes the assignment.
+- [`part-1.ipynb`](part-1.ipynb): This part cleans and saves the data set. It also includes traditional analysis methods.
+- [`part-2.ipynb`](part-2.ipynb): This part uses the data to train and test models.
 
 ## Setup and Execution
 
